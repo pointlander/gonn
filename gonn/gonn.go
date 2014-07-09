@@ -209,6 +209,38 @@ func genRandomIdx(N int) []int {
 	return A
 }
 
+type TrainingSet interface {
+	Len() int
+	Fill(inputs, targets []float64, i int)
+}
+
+func (self *NeuralNetwork) TrainSet(set TrainingSet, iteration int) {
+	length, inputs, targets := set.Len(), make([]float64, len(self.InputLayer) - 1), make([]float64, len(self.OutputLayer))
+
+	iter_flag := -1
+	for i := 0; i < iteration; i++ {
+		idx_ary := genRandomIdx(length)
+		cur_err := 0.0
+		for j := 0; j < length; j++ {
+			set.Fill(inputs, targets, idx_ary[j])
+			self.Forward(inputs)
+			self.Feedback(targets)
+			cur_err += self.CalcError(targets)
+			if (j+1)%1000 == 0 {
+				if iter_flag != i {
+					fmt.Println("")
+					iter_flag = i
+				}
+				fmt.Printf("iteration %vth / progress %.2f %% \r", i+1, float64(j)*100/float64(length))
+			}
+		}
+		if (iteration >= 10 && (i+1)%(iteration/10) == 0) || iteration < 10 {
+			fmt.Printf("\niteration %vth MSE: %.5f", i+1, cur_err / float64(length))
+		}
+	}
+	fmt.Println("\ndone.")
+}
+
 func (self *NeuralNetwork) Train(inputs [][]float64, targets [][]float64, iteration int) {
 	if len(inputs[0])+1 != len(self.InputLayer) {
 		panic("amount of input variable doesn't match")
