@@ -16,6 +16,7 @@ type PCNNetwork struct{
 	Regression bool
 	Rate1 float64
 	Rate2 float64
+	random *rand.Rand
 }
 
 
@@ -60,7 +61,7 @@ func SparseMatrix(rows int) []map[string]float64 {
 
 func NewPCNNetwork(iOutputCount int,iRegression bool,iRate1,iRate2 float64) * PCNNetwork{
 	self := &PCNNetwork{}
-	rand.Seed(time.Now().UnixNano())
+	self.random = rand.New(rand.NewSource(time.Now().UnixNano()))
 	self.InputLayer = make(map[string]float64)
 	self.InputLayer["~"]=1.0 //bias node
 	self.OutputLayer = make([]float64,iOutputCount)
@@ -89,11 +90,11 @@ func (self *PCNNetwork) TrainMap(inputs []map[string]float64, targets [][]float6
 	if len(targets[0]) != len(self.OutputLayer) {
 		panic("amount of output variable doesn't match")
 	}
-	
+
 
 	iter_flag := -1
 	for i := 0; i < iteration; i++ {
-		idx_ary := genRandomIdx(len(inputs))
+		idx_ary := genRandomIdx(self.random, len(inputs))
 		cur_err := 0.0
 		for j := 0; j < len(inputs); j++ {
 			self.ForwardMap(inputs[idx_ary[j]])
@@ -115,7 +116,7 @@ func (self *PCNNetwork) TrainMap(inputs []map[string]float64, targets [][]float6
 }
 
 func (self *PCNNetwork) ForwardMap(input map[string]float64) []float64{
-	
+
 	for i,_ := range input {
 		self.InputLayer[i] = input[i]
 	}
@@ -124,7 +125,7 @@ func (self *PCNNetwork) ForwardMap(input map[string]float64) []float64{
 		sum := 0.0
 		for j,_:= range input {
 			if _,ok := self.WeightOutput[i][j] ; !ok{
-				self.WeightOutput[i][j]  = rand.Float64()*2.0 - 1.0
+				self.WeightOutput[i][j]  = self.random.Float64()*2.0 - 1.0
 			}
 			sum += self.InputLayer[j] * self.WeightOutput[i][j]
 		}
@@ -156,4 +157,3 @@ func (self *PCNNetwork) FeedbackMap(target []float64, input map[string]float64) 
 		}
 	}
 }
-

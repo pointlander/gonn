@@ -19,6 +19,7 @@ type RBFNetwork struct{
 	Regression bool
 	Rate1 float64
 	Rate2 float64
+	random *rand.Rand
 }
 
 
@@ -54,11 +55,11 @@ func DefaultRBFNetwork(iInputCount,iOutputCount,iCenters int,iRegression bool) *
 func NewRBFNetwork(iInputCount,iOutputCount,iCenters int,iRegression bool,iRate1,iRate2 float64) * RBFNetwork{
 	self := &RBFNetwork{}
 	self.InputCount = iInputCount
-	rand.Seed(time.Now().UnixNano())
+	self.random = rand.New(rand.NewSource(time.Now().UnixNano()))
 	self.InputLayer = make([]float64,iCenters+1)
 	self.OutputLayer = make([]float64,iOutputCount)
 	self.Centers = make([][]float64,iCenters)
-	self.WeightOutput = randomMatrix(iOutputCount, iCenters+1, -1.0, 1.0)
+	self.WeightOutput = randomMatrix(self.random, iOutputCount, iCenters+1, -1.0, 1.0)
 	self.LastChangeOutput = makeMatrix(iOutputCount, iCenters+1, 0.0)
 	self.Regression = iRegression
 	self.Rate1 = iRate1
@@ -152,7 +153,7 @@ func (self *RBFNetwork) Train(inputs [][]float64, targets [][]float64, iteration
 	if len(self.Centers)>len(inputs){
 		panic("too many centers, should be less than samples count")
 	}
-	sf_idx := genRandomIdx(len(inputs))
+	sf_idx := genRandomIdx(self.random, len(inputs))
 	for i:=0;i<len(self.Centers);i++{
 		self.Centers[i] = inputs[sf_idx[i]] //random centers
 	}
@@ -168,7 +169,7 @@ func (self *RBFNetwork) Train(inputs [][]float64, targets [][]float64, iteration
 
 	iter_flag := -1
 	for i := 0; i < iteration; i++ {
-		idx_ary := genRandomIdx(len(inputs))
+		idx_ary := genRandomIdx(self.random, len(inputs))
 		cur_err := 0.0
 		for j := 0; j < len(inputs); j++ {
 			self.ForwardRBF(r_inputs[idx_ary[j]])
