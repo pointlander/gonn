@@ -1,19 +1,19 @@
 package main
 import (
+	"code.google.com/p/plotinum/plot"
+	"code.google.com/p/plotinum/plotter"
+	"code.google.com/p/plotinum/vg"
 	"flag"
 	"fmt"
+	"github.com/bugra/kmeans"
 	"github.com/dcadenas/pagerank"
 	"github.com/pointlander/gonn/gonn"
 	"io/ioutil"
-	"math"
 	"runtime"
-	//"os"
 )
 
 const (
 	WIDTH = 16
-	LABEL = 0x4000000000000000
-	SYMBOL = 0x2000000000000000
 )
 
 type AliceSet struct {
@@ -127,31 +127,37 @@ func main(){
 			ranks2[i] = rank
 		})
 
-		total := make([]float64, length)
-		var max float64
+		points := make(plotter.XYs, len(labels))
+		data := make([][]float64, len(labels))
 		for i := range labels {
-			total[i] = (ranks[int(labels[i])] + ranks1[int(labels1[i])] + ranks2[int(labels2[i])])/3
-			if total[i] > max {
-				max = total[i]
-			}
+			x, y := ranks[int(labels[i])], ranks1[int(labels1[i])]
+
+			points[i].X, points[i].Y = x, y
+
+			coords := make([]float64, 2)
+			coords[0], coords[1] = x, y
+			data[i] = coords
 		}
 
-		/*for i := range alice {
-			fmt.Printf("%v\n", ranks[i])
-		}*/
-
+		categories, err := kmeans.Kmeans(data, 7, kmeans.EuclideanDistance, 100)
 		for i, symbol := range alice {
 			if symbol == '\n' || symbol == '\r' || symbol == ' ' || symbol == '\t' {
 				fmt.Printf("%c", symbol)
 			} else {
-				rank := total[i]
-				/*a := 8 * rank / max
-				b := a / math.Sqrt(a * a + 1)
-				c := 31 + math.Floor(b * 7)*/
-				c := 31 + math.Floor(7 * rank / max)
-				fmt.Printf("\x1B[%vm%c\x1B[m", c, symbol)
-				//fmt.Printf("\x1B[%vm%c\x1B[m", 31 + int(labels[i] % 7), symbol)
+				fmt.Printf("\x1B[%vm%c\x1B[m", 31 + categories[i], symbol)
 			}
+		}
+
+		p, err := plot.New()
+		p.Title.Text = "PageRank Clusters"
+		p.X.Label.Text = "X"
+		p.Y.Label.Text = "Y"
+		scatter, err := plotter.NewScatter(points)
+		scatter.Shape = plot.CircleGlyph{}
+		scatter.Radius = vg.Points(2)
+		p.Add(scatter)
+		if err := p.Save(8, 8, "page_rank.png"); err != nil {
+			panic(err)
 		}
 	}
 }
