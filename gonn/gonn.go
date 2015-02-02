@@ -24,6 +24,7 @@ type NeuralNetwork struct {
 	Regression       bool
 	Rate1            float64 //learning rate
 	Rate2            float64
+	seed		 int64
 	random		 *rand.Rand
 }
 
@@ -99,6 +100,7 @@ func NewNetwork(iInputCount int, iHiddenCount []int, iOutputCount int, iRegressi
 	if seed == 0 {
 		seed = time.Now().UnixNano()
 	}
+	network.seed = seed
 	network.random = rand.New(rand.NewSource(seed))
 	network.Regression = iRegression
 	network.Rate1 = iRate1
@@ -118,6 +120,69 @@ func NewNetwork(iInputCount int, iHiddenCount []int, iOutputCount int, iRegressi
 	network.WeightOutput, network.LastChangeOutput = randomMatrix(network.random, iOutputCount, previousSize, -1.0, 1.0), makeMatrix(iOutputCount, previousSize, 0.0)
 
 	return network
+}
+
+func (n *NeuralNetwork) Copy() *NeuralNetwork {
+	c := new(NeuralNetwork)
+
+	c.HiddenLayer = make([][]float64, len(n.HiddenLayer))
+	for i, j := range n.HiddenLayer {
+		c.HiddenLayer[i] = make([]float64, len(j))
+		copy(c.HiddenLayer[i], j)
+	}
+
+	c.InputLayer = make([]float64, len(n.InputLayer))
+	copy(c.InputLayer, n.InputLayer)
+
+	c.OutputLayer = make([]float64, len(n.OutputLayer))
+	copy(c.OutputLayer, n.OutputLayer)
+
+	c.WeightHidden = make([][][]float64, len(n.WeightHidden))
+	for x, y := range n.WeightHidden {
+		c.WeightHidden[x] = make([][]float64, len(y))
+		for i, j := range y {
+			c.WeightHidden[x][i] = make([]float64, len(j))
+			copy(c.WeightHidden[x][i], j)
+		}
+	}
+
+	c.WeightOutput = make([][]float64, len(n.WeightOutput))
+	for i, j := range n.WeightOutput {
+		c.WeightOutput[i] = make([]float64, len(j))
+		copy(c.WeightOutput[i], j)
+	}
+
+	c.ErrOutput = make([]float64, len(n.ErrOutput))
+	copy(c.ErrOutput, n.ErrOutput)
+
+	c.ErrHidden = make([][]float64, len(n.ErrHidden))
+	for i, j := range n.ErrHidden {
+		c.ErrHidden[i] = make([]float64, len(j))
+		copy(c.ErrHidden[i], j)
+	}
+
+	c.LastChangeHidden = make([][][]float64, len(n.LastChangeHidden))
+	for x, y := range n.LastChangeHidden {
+		c.LastChangeHidden[x] = make([][]float64, len(y))
+		for i, j := range y {
+			c.LastChangeHidden[x][i] = make([]float64, len(j))
+			copy(c.LastChangeHidden[x][i], j)
+		}
+	}
+
+	c.LastChangeOutput = make([][]float64, len(n.LastChangeOutput))
+	for i, j := range n.LastChangeOutput {
+		c.LastChangeOutput[i] = make([]float64, len(j))
+		copy(c.LastChangeOutput[i], j)
+	}
+
+	c.Regression = n.Regression
+	c.Rate1 = n.Rate1
+	c.Rate2 = n.Rate2
+	c.seed = n.seed
+	c.random = rand.New(rand.NewSource(n.seed))
+
+	return c
 }
 
 func (self *NeuralNetwork) forward64(begin, end, layer int, inputs []float64, done chan<- bool) {
